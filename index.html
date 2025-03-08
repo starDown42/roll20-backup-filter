@@ -14,27 +14,22 @@
             ];
 
             const inputBox = document.getElementById("htmlInput");
-            const orignCobyButton = document.getElementById("orignCobyButton");
-            orignCobyButton.onclick = () => {
-                navigator.clipboard.writeText(inputBox.value);
-                alert(`입력한 원본 HTML 코드가 클립보드에 복사되었습니다.`);
-            };
-
             const resultsContainer = document.getElementById("results");
-            const filterButton = document.getElementById("filterButton");            
-             
+            const filterButton = document.getElementById("filterButton");
+            const journalButton = document.getElementById("journalButton"); // 저널 추출 버튼 추가
+
             function createResultFields() {
                 conditions.forEach(cond => {
                     let wrapper = document.createElement("div");
                     wrapper.classList.add("mb-3");
-                    
+
                     let title = document.createElement("h4");
                     title.classList.add("mb-3");
                     title.textContent = cond.name;
-                    
+
                     let innerWrapper = document.createElement("div");
                     innerWrapper.classList.add("d-flex", "align-items-stretch");
-                    
+
                     let textarea = document.createElement("textarea");
                     textarea.classList.add("form-control");
                     textarea.setAttribute("readonly", true);
@@ -48,19 +43,50 @@
                         navigator.clipboard.writeText(textarea.value);
                         alert(`${cond.name} 결과가 클립보드에 복사되었습니다.`);
                     };
-                    
+
                     innerWrapper.appendChild(textarea);
                     innerWrapper.appendChild(copyButton);
                     wrapper.appendChild(title);
                     wrapper.appendChild(innerWrapper);
                     resultsContainer.appendChild(wrapper);
                 });
+
+                // 저널 포맷 결과창 추가
+                let journalWrapper = document.createElement("div");
+                journalWrapper.classList.add("mb-3");
+
+                let journalTitle = document.createElement("h4");
+                journalTitle.classList.add("mb-3");
+                journalTitle.textContent = "저널 포맷 변환 결과";
+
+                let journalInnerWrapper = document.createElement("div");
+                journalInnerWrapper.classList.add("d-flex", "align-items-stretch");
+
+                let journalTextarea = document.createElement("textarea");
+                journalTextarea.classList.add("form-control");
+                journalTextarea.setAttribute("readonly", true);
+                journalTextarea.style.height = "150px";
+                journalTextarea.id = "journalResult";
+
+                let journalCopyButton = document.createElement("button");
+                journalCopyButton.innerHTML = "📋";
+                journalCopyButton.classList.add("btn", "btn-secondary", "ms-2");
+                journalCopyButton.onclick = () => {
+                    navigator.clipboard.writeText(journalTextarea.value);
+                    alert("저널 포맷 결과가 클립보드에 복사되었습니다.");
+                };
+
+                journalInnerWrapper.appendChild(journalTextarea);
+                journalInnerWrapper.appendChild(journalCopyButton);
+                journalWrapper.appendChild(journalTitle);
+                journalWrapper.appendChild(journalInnerWrapper);
+                resultsContainer.appendChild(journalWrapper);
             }
 
             function filterHtml() {
                 let htmlContent = inputBox.value;
                 if (!htmlContent.trim()) return alert("HTML 코드를 입력하세요.");
-                
+
                 let parser = new DOMParser();
                 let doc = parser.parseFromString(htmlContent, "text/html");
 
@@ -80,7 +106,7 @@
                             if (parentMessage) deleteTargets.push(parentMessage);
                         });
                     }
-                    
+
                     deleteTargets = deleteTargets.filter(el => {
                         if (!el.querySelector("div.avatar")) {
                             el.remove();
@@ -88,11 +114,11 @@
                         }
                         return true;
                     });
-                    
+
                     deleteTargets.forEach(A => {
                         let B = A.nextElementSibling;
                         if (!B || !B.classList.contains("message")) return;
-                        
+
                         if (A.querySelector("div.avatar")) {
                             if (B.querySelector("div.avatar")) {
                                 A.remove();
@@ -106,32 +132,57 @@
                             A.remove();
                         }
                     });
-                    
+
                     let resultTextarea = resultsContainer.querySelector(`textarea[data-type="${cond.deleteType}"]`);
                     resultTextarea.value = doc.body.innerHTML;
                 });
             }
-            
+
+            function extractJournalFormat() {
+                let htmlContent = inputBox.value;
+                if (!htmlContent.trim()) return alert("HTML 코드를 입력하세요.");
+
+                let parser = new DOMParser();
+                let doc = parser.parseFromString(htmlContent, "text/html");
+
+                let output = [];
+                let messages = doc.querySelectorAll(".message");
+
+                messages.forEach(msg => {
+                    let author = msg.querySelector(".by")?.textContent.trim() || "알 수 없음";
+                    let journalName = "[저널명]";
+                    let texts = [];
+
+                    msg.querySelectorAll(".desc, .messageText").forEach(node => {
+                        texts.push(node.textContent.trim());
+                    });
+
+                    let combinedText = texts.join(" ");
+                    output.push(`${author}:${journalName}\t${combinedText}`);
+                });
+
+                document.getElementById("journalResult").value = output.join("\n");
+            }
+
             filterButton.addEventListener("click", filterHtml);
+            journalButton.addEventListener("click", extractJournalFormat);
             createResultFields();
         });
     </script>
 </head>
 <body class="container py-4">
     <h2 class="mb-3">Roll20 필터링</h2>
-    <hr class="my-4"> <!-- 구분선 추가 -->
+    <hr class="my-4">
     <div>
         <h4 class="mb-3">원본 HTML 코드 입력</h4>
-        
-        <textarea id="htmlInput" class="form-control mb-3" rows="6" placeholder="&lt;div class= &quot;textchatcontainer &quot; id= &quot;textchat &quot;&gt; 전체를 입력해주세요."></textarea>
+        <textarea id="htmlInput" class="form-control mb-3" rows="6" placeholder="&lt;div class= &quot;textchatcontainer&quot; id= &quot;textchat&quot;&gt; 전체를 입력해주세요."></textarea>
         <div class="d-flex justify-content-end align-items-center">
-            <button id="orignCobyButton" class="btn btn-secondary" >📋</button>
+            <button id="orignCobyButton" class="btn btn-secondary">📋</button>
             <button id="filterButton" class="btn btn-primary ms-2">필터링 시작</button>
+            <button id="journalButton" class="btn btn-success ms-2">저널 포맷 추출</button>
         </div>
     </div>
-    <hr class="my-4"> <!-- 구분선 추가 -->
-    <div id="results">
-
-    </div>
+    <hr class="my-4">
+    <div id="results"></div>
 </body>
 </html>
