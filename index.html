@@ -161,10 +161,10 @@
                             // 대사 부분
                             const authorNode = node.querySelector('.by');
                             const textNode = Array.from(node.childNodes).find(n => n.nodeType === Node.TEXT_NODE);
-            
-                            const author = authorNode ? authorNode.childNodes[0]?.nodeValue.trim() : '알 수 없음';
+                            
+                            const author = authorNode ? authorNode.textContent.trim() : '알 수 없음'; // .by 내부 공백 제거
                             const text = textNode ? textNode.nodeValue.trim() : '';
-            
+                            
                             // desc 내용이 있다면 먼저 출력하고, 대사를 추가
                             if (descBuffer) {
                                 output.push(descBuffer);
