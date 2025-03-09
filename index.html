@@ -148,7 +148,7 @@
                 let output = [];
                 let descBuffer = '';
             
-                doc.body.childNodes.forEach(node => {
+                doc.querySelectorAll('.textchatcontainer .content .message').forEach(node => {
                     if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('message')) {
                         // .desc 또는 .emote 클래스 처리
                         if (node.classList.contains('desc')) {
