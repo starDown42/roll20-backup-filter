@@ -136,65 +136,104 @@
                     let resultTextarea = resultsContainer.querySelector(`textarea[data-type="${cond.deleteType}"]`);
                     resultTextarea.value = doc.body.innerHTML;
                 });
+
+                alert("필터링이 완료되었습니다.")
             }
 
             function extractJournalFormat() {
                 let htmlContent = inputBox.value;
                 if (!htmlContent.trim()) return alert("HTML 코드를 입력하세요.");
-            
+                
                 let parser = new DOMParser();
                 let doc = parser.parseFromString(htmlContent, "text/html");
-            
+                
                 let output = [];
                 let descBuffer = '';
-            
+                let emoteBuffer = ''; // emote를 위한 버퍼 추가
+                
                 doc.querySelectorAll('.textchatcontainer .content .message').forEach(node => {
                     if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('message')) {
-                        // .desc 또는 .emote 클래스 처리
+                        // .desc 클래스 처리
                         if (node.classList.contains('desc')) {
-                            descBuffer += (descBuffer ? ' ' : '') + node.innerText.trim(); // desc 내용 병합
-                        } else if (node.classList.contains('emote')) {
-                            // .emote 노드를 처리할 경우, 이 부분은 삭제하거나 특별히 처리할 수 있음
-                            // 여기선 기본적으로 무시하지 않음
-                            descBuffer += (descBuffer ? ' ' : '') + node.innerText.trim();
-                        } else {
+                            descBuffer += (descBuffer ? ' ' : '') + node.innerText.trim(); // .desc 내용 병합
+
+                                // .emote가 있으면 먼저 출력하고, 대사를 출력
+                                if (emoteBuffer) {
+                                    output.push(`\n${emoteBuffer}`); // .emote는 맨 앞에 \n 추가
+                                    emoteBuffer = ''; // emoteBuffer 초기화
+                                }
+                        } 
+                        // .emote 클래스 처리
+                        else if (node.classList.contains('emote')) {
+                            emoteBuffer += (emoteBuffer ? ' ' : '') + node.innerText.trim(); // .emote 내용 병합
+
+                            // .desc가 있으면 먼저 출력하고, 대사를 출력
+                            if (descBuffer) {
+                                output.push(`\n${descBuffer}`); // .desc는 맨 앞에 \n 추가
+                                descBuffer = ''; // descBuffer 초기화
+                            }
+                        }
+                        else {
                             // 대사 부분
                             const authorNode = node.querySelector('.by');
-                            const textNode = Array.from(node.childNodes).find(n => n.nodeType === Node.TEXT_NODE);
+                            const author = authorNode ? authorNode.textContent.trim() : '';
                             
-                            const author = authorNode ? authorNode.textContent.trim() : '알 수 없음'; // .by 내부 공백 제거
-                            const text = textNode ? textNode.nodeValue.trim() : '';
+                            const textNode = Array.from(node.childNodes)
+                                .filter(n => n.nodeType === Node.TEXT_NODE)  // 텍스트 노드를 필터링
+                                .map(n => n.nodeValue.trim())  // 텍스트 값만 가져오기
+                                .filter(n => n !== '');  // 빈 텍스트는 제외
                             
-                            // desc 내용이 있다면 먼저 출력하고, 대사를 추가
+                            // 첫 번째 텍스트는 대사가 아니므로 두 번째 텍스트부터 대사로 사용
+                            const text = textNode.length > 1 ? textNode.slice(1).join(' ') : textNode[0] || '';
+                            
+                            // .desc가 있으면 먼저 출력하고, 대사를 출력
                             if (descBuffer) {
-                                output.push(descBuffer);
-                                descBuffer = ''; // 초기화
+                                output.push(`\n${descBuffer}`); // .desc는 맨 앞에 \n 추가
+                                descBuffer = ''; // descBuffer 초기화
                             }
-            
-                            // 대사 출력
+                            
+                            // .emote가 있으면 먼저 출력하고, 대사를 출력
+                            if (emoteBuffer) {
+                                output.push(`\n${emoteBuffer}`); // .emote는 맨 앞에 \n 추가
+                                emoteBuffer = ''; // emoteBuffer 초기화
+                            }
+
+                            // 작성자가 있을 경우
                             if (author) {
-                                output.push(`${author}:[저널명]\t${text}`);
+                                output.push(`\n${author}:[저널명]\t${text}`);  // 작성자가 있을 경우 맨 앞에 \n 추가
                             } else {
+                                // 작성자가 없으면 그냥 텍스트만 출력
                                 output.push(text);
                             }
                         }
                     } else if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim() !== '') {
                         // 텍스트 노드가 있다면 그 자체를 출력
                         if (descBuffer) {
-                            output.push(descBuffer);
+                            output.push(`\n${descBuffer}`);
                             descBuffer = ''; // 초기화
+                        }
+                        if (emoteBuffer) {
+                            output.push(`\n${emoteBuffer}`);
+                            emoteBuffer = ''; // 초기화
                         }
                         output.push(node.nodeValue.trim());
                     }
                 });
-            
+
                 // .desc 메시지가 마지막에 남아 있다면 출력
                 if (descBuffer) {
-                    output.push(descBuffer);
+                    output.push(`\n${descBuffer}`);
                 }
-            
+                
+                // .emote 메시지가 마지막에 남아 있다면 출력
+                if (emoteBuffer) {
+                    output.push(`\n${emoteBuffer}`);
+                }
+
                 document.getElementById("journalResult").value = output.join("\n");
+                alert("텍스트 추출이 완료되었습니다.")
             }
+
 
 
             filterButton.addEventListener("click", filterHtml);
@@ -212,7 +251,7 @@
         <div class="d-flex justify-content-end align-items-center">
             <button id="orignCobyButton" class="btn btn-secondary">📋</button>
             <button id="filterButton" class="btn btn-primary ms-2">필터링 시작</button>
-            <button id="journalButton" class="btn btn-success ms-2">저널 포맷 추출</button>
+            <button id="journalButton" class="btn btn-success ms-2">텍스트 추출</button>
         </div>
     </div>
     <hr class="my-4">
