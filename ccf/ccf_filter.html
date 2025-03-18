@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>CCF 텍스트 추출</title>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link href="../style.css" rel="stylesheet">
+	<script src="https://unpkg.com/prettier@3.0.0/standalone.js"></script>
+	<script src="https://unpkg.com/prettier@3.0.0/plugins/html.js"></script>
+	<style>
+		#title::after {
+			content: '업로드 파일의 경우, [https://sukenell.github.io/cclog_custom/] 사이트에서 가공한 파일을 업로드해야 합니다.';
+			font-size: 1rem;
+			display: inline-block;
+			margin-left: 10px;
+			color: #777;
+		}
+	</style>
+</head>
+
+<body class="container py-4">
+	<h2 class="mb-3 text-center"><a class="hometitle" href="../index.html">ORPG 백업 서포트</a></h2>
+	<hr class="my-4">
+	<h3 class="mb-3">CCF 텍스트 추출</h3>
+	<hr class="my-4">
+	<div>
+		<h4 class="mb-3" id="title">HTML 파일 업로드</h4>
+		<input type="file" id="fileInput" accept=".html" class="form-control mb-3">
+		<button onclick="extractDialogue()" class="btn btn-success">텍스트 추출</button>
+	</div>
+	<hr class="my-4">
+	<textarea id="output" class="form-control" rows="10" readonly></textarea>
+
+	<script>
+		const prettierConfig = {
+			arrowParens: "always",
+			bracketSameLine: false,
+			objectWrap: "preserve",
+			bracketSpacing: true,
+			semi: true,
+			experimentalOperatorPosition: "end",
+			experimentalTernaries: false,
+			singleQuote: true,
+			jsxSingleQuote: false,
+			quoteProps: "as-needed",
+			trailingComma: "all",
+			singleAttributePerLine: false,
+			htmlWhitespaceSensitivity: "css",
+			vueIndentScriptAndStyle: false,
+			proseWrap: "preserve",
+			insertPragma: false,
+			printWidth: 9999,
+			requirePragma: false,
+			tabWidth: 4,
+			useTabs: true,
+			embeddedLanguageFormatting: "off",
+		};
+
+
+		async function extractDialogue() {
+			const fileInput = document.getElementById('fileInput');
+			if (!fileInput.files.length) return alert('HTML 파일을 선택하세요.');
+
+			const reader = new FileReader();
+			reader.onload = async function (event) { // ✅ async 추가
+				const parser = new DOMParser();
+				const oriDoc = parser.parseFromString(event.target.result, 'text/html');
+
+				// 🔹 Prettier를 이용한 포맷팅
+				const formattedHtml = await prettier.format(event.target.result, { // ✅ await 정상 적용
+					parser: "html",
+					plugins: [prettierPlugins.html],
+					...prettierConfig, // ✅ 커스텀 설정 적용
+				});
+
+				// 🔹 다시 HTML로 변환 (중요!)
+				const doc = parser.parseFromString(formattedHtml, 'text/html');
+
+				let output = '';
+
+				doc.querySelectorAll('.gap').forEach(gap => {
+					let spans = gap.querySelectorAll('p span');
+					
+					// 이름름
+					let nameParts = [];
+					// 🔹 첫 번째 요소가 비어있지 않으면 "[첫 번째 요소]"
+					if (spans[0].textContent.trim()) {
+						nameParts.push(`[${spans[0].textContent.trim()}]`);
+					}
+					// 🔹 두 번째 요소부터 마지막을 제외한 요소들을 모두 합침
+					for (let i = 1; i < spans.length - 1; i++) {
+						let text = spans[i].textContent.trim();
+						if (text) nameParts.push(text);
+					}
+					const name = nameParts.join(' '); // 최종 이름 구성
+
+					// 대사
+					let textElem = spans[spans.length - 1]; // 마지막 span
+					const text = textElem.textContent.trim();
+
+					if (name && text) {
+						output += `${name}::\t${text}\n`;
+					}
+				});
+
+				document.getElementById('output').value = output;
+			};
+			reader.readAsText(fileInput.files[0]);
+		}
+
+	</script>
+</body>
+
+</html>
