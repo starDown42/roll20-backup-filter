@@ -51,19 +51,21 @@
 	<script>
 		var messages = {};
 
-		document.addEventListener("DOMContentLoaded", function () {
-			const fileInput = document.getElementById('fileInput');
+		const fileInput = document.getElementById('fileInput');
 
-			const outputArea = document.getElementById('output');
-			const btnOutputCopy = document.getElementById('btn_outputCopy');
+		const outputArea = document.getElementById('output');
+		const btnOutputCopy = document.getElementById('btn_outputCopy');
+
+		const journalOutputArea = document.getElementById('journalOutput');
+		const btn_journalTxtCopy = document.getElementById('btn_journalTxtCopy');
+		const journalSelect = document.getElementById('journalSelect');
+		
+		document.addEventListener("DOMContentLoaded", function () {
 			btnOutputCopy.onclick = () => {
 				navigator.clipboard.writeText(outputArea.value);
 				alert(`전체 출력 결과가 클립보드에 복사되었습니다.`);
 			};
 
-			const journalOutputArea = document.getElementById('journalOutput');
-			const btn_journalTxtCopy = document.getElementById('btn_journalTxtCopy');
-			const journalSelect = document.getElementById('journalSelect');
 			btn_journalTxtCopy.onclick = () => {
 				if(journalSelect.value != 0) {
 					navigator.clipboard.writeText(journalOutputArea.value);
@@ -73,6 +75,7 @@
 					return;
 				}
 			};
+			
 			// SelectBox 변경 이벤트
 			journalSelect.onchange = () => {
 				let selectedKey = journalSelect.value;
