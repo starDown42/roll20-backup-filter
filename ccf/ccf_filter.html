@@ -100,9 +100,7 @@
 					let textElem = spans[spans.length - 1]; // 마지막 span
 					const text = textElem.textContent.trim();
 
-					if (name && text) {
-						output += `${name}::\t${text}\n`;
-					}
+					output += `${name}::\t${text}\n`;
 				});
 
 				document.getElementById('output').value = output;
