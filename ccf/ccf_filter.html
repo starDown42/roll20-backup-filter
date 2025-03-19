@@ -75,12 +75,12 @@
 					return;
 				}
 			};
-			
+
 			// SelectBox 변경 이벤트
 			journalSelect.onchange = () => {
 				let selectedKey = journalSelect.value;
 				if (messages[selectedKey]) {
-					journalOutputArea.value = messages[selectedKey].join("\n");
+					journalOutputArea.value = messages[selectedKey].join("\n\n");
 				} else {
 					journalOutputArea.value = "";
 				}
