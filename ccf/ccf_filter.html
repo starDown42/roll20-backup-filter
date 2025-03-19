@@ -52,6 +52,8 @@
 		var messages = {};
 
 		document.addEventListener("DOMContentLoaded", function () {
+			const fileInput = document.getElementById('fileInput');
+
 			const outputArea = document.getElementById('output');
 			const btnOutputCopy = document.getElementById('btn_outputCopy');
 			btnOutputCopy.onclick = () => {
@@ -108,11 +110,14 @@
 
 
 		async function extractDialogue() {
-			const fileInput = document.getElementById('fileInput');
 			if (!fileInput.files.length) return alert('HTML 파일을 선택하세요.');
 
 			const reader = new FileReader();
 			reader.onload = async function (event) { // ✅ async 추가
+				outputArea.value = "";
+				journalOutputArea.value = "";
+
+
 				const parser = new DOMParser();
 				const oriDoc = parser.parseFromString(event.target.result, 'text/html');
 
@@ -161,11 +166,11 @@
 				});
 
 				// 추출 결과 output 출력
-				document.getElementById('output').value = output;
+				outputArea.value = output;
 
 				// 일반 대사만 출력할 수 있도록 캐릭터명을 select box에 값 추가가
 				 // 기존 옵션 제거 후 기본값 추가
-				 journalSelect.innerHTML = '<option value="0">-</option>';
+				 journalSelect.innerHTML = '<option value="0">선택</option>';
 
 				// messages의 key 값을 selectbox에 추가
 				Object.keys(messages).forEach(key => {
