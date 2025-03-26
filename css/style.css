@@ -1,0 +1,9 @@
+header, header * {
+    background-color: #cdd1e1;
+    font-weight: bolder;
+}
+
+.hometitle {
+    text-decoration: none;
+    color: #000;
+}

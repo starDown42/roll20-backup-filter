@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Roll20 필터링</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="../style.css" rel="stylesheet">
+    <link href="../css/style.css" rel="stylesheet">
 	<script src="https://unpkg.com/prettier@3.0.0/standalone.js"></script>
 	<script src="https://unpkg.com/prettier@3.0.0/plugins/html.js"></script>
     <script>
@@ -52,7 +52,7 @@
                     let wrapper = document.createElement("div");
                     wrapper.classList.add("mb-3");
 
-                    let title = document.createElement("h4");
+                    let title = document.createElement("h5");
                     title.classList.add("mb-3");
                     title.textContent = cond.name;
 
@@ -67,7 +67,7 @@
 
                     let copyButton = document.createElement("button");
                     copyButton.innerHTML = "📋";
-                    copyButton.classList.add("btn", "btn-secondary", "ms-2");
+                    copyButton.classList.add("btn", "btn-dark", "ms-2");
                     copyButton.onclick = () => {
                         navigator.clipboard.writeText(textarea.value);
                         alert(`${cond.name} 결과가 클립보드에 복사되었습니다.`);
@@ -84,7 +84,7 @@
                 let journalWrapper = document.createElement("div");
                 journalWrapper.classList.add("mb-3");
 
-                let journalTitle = document.createElement("h4");
+                let journalTitle = document.createElement("h5");
                 journalTitle.classList.add("mb-3");
                 journalTitle.textContent = "저널 포맷 변환 결과";
 
@@ -99,7 +99,7 @@
 
                 let journalCopyButton = document.createElement("button");
                 journalCopyButton.innerHTML = "📋";
-                journalCopyButton.classList.add("btn", "btn-secondary", "ms-2");
+                journalCopyButton.classList.add("btn", "btn-dark", "ms-2");
                 journalCopyButton.onclick = () => {
                     navigator.clipboard.writeText(journalTextarea.value);
                     alert("저널 포맷 결과가 클립보드에 복사되었습니다.");
@@ -325,19 +325,33 @@
     </script>
 </head>
 <body class="container py-4">
-	<h2 class="mb-3 text-center"><a class="hometitle" href="../index.html">ORPG 백업 서포트</a></h2>
-	<hr class="my-4">
-    <h3 class="mb-3">Roll20 필터링</h3>
-    <hr class="my-4">
-    <div>
-        <h4 class="mb-3" id="title">HTML 파일 업로드</h4>
-        <input type="file" id="fileInput" accept=".html" class="form-control mb-3">
-        <div class="d-flex justify-content-end align-items-center">
-            <button id="filterButton" class="btn btn-primary ms-2">필터링 시작</button>
-            <button id="journalButton" class="btn btn-success ms-2">텍스트 추출</button>
+	<header>
+		<h2 class="pt-4 text-center">
+			<a class="hometitle" href="../index.html">ORPG 백업 서포트</a>
+		</h2>
+		<hr class="my-4">
+	</header>
+
+    <main>
+		<div class="title">
+            <h3 class="mb-3 fw-bold">📄 Roll20 필터링</h3>
+            <hr class="my-4">
         </div>
-    </div>
-    <hr class="my-4">
-    <div id="results"></div>
+    
+        <div>
+            <button id="filterButton" class="btn btn-primary ms-2 float-end">필터링 시작</button>
+            <button id="journalButton" class="btn btn-success ms-2 float-end">텍스트 추출</button>
+
+            <h4 class="mb-3" id="title">HTML 파일 업로드</h4>
+            <input type="file" id="fileInput" accept=".html" class="form-control mb-3">
+        </div>
+        <hr class="my-4 mb-3">
+
+        <section class="py-4 px-4 border-0 rounded bg-success text-white">
+            <div id="results"></div>
+        </section>
+        
+
+    </main>
 </body>
 </html>
