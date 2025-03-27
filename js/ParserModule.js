@@ -1,4 +1,4 @@
-(function (window) {
+const ParserModule = (function () {
     // prettier 설정
     const prettierConfig = {
         arrowParens: "always",
@@ -24,26 +24,54 @@
         embeddedLanguageFormatting: "off"
     };
 
-    const parseHtmlFile = async (fileStr) => {
+    // 공통:: 수정 시 추가옵션 - 온점 > 말줄임표
+    const edit_dotToEllipsis= (oriHtmlStr) => {
+        return oriHtmlStr.replace(/\.{2,}/g, function(match) {
+            var len = match.length;
+            if (len <= 4) return '…';
+    
+            // 6개 이상일 경우
+            var count = Math.floor(len / 3) + (len % 3 > 0 ? 1 : 0);
+            return '…'.repeat(count);
+        });
+    }
+
+    // 공통:: 수정 시 추가옵션
+    const editOption = {
+        "dot_to_ellipsis" : edit_dotToEllipsis // 온점 > 말줄임표
+    }
+
+    // 공통:: html 파일 파싱
+    const parseHtmlFile = async (oriHtmlStr, optionForm) => {
         // Parser 선언
         const parser = new DOMParser();
 
+        let editHtmlStr = oriHtmlStr;
+
         // 업로드한 html 파일에 대하여 Prettier 오토 포맷팅 적용, string 형태로 저장
-        const formattedHtml = await prettier.format(fileStr, {
+        editHtmlStr = await prettier.format(editHtmlStr, {
             parser: "html",
             plugins: [prettierPlugins.html],
             ...prettierConfig,
         });
 
+        //for(optionForm) 옵션에 따라 html 원본 str 수정
+         optionForm.querySelectorAll('input').forEach(input => {
+            if(input.checked && editOption[input.id]){
+                editHtmlStr = editOption[input.id](editHtmlStr);
+            }
+        });
+
         // string to doc 객체
-        const doc = parser.parseFromString(formattedHtml, 'text/html');
+        const doc = parser.parseFromString(editHtmlStr, 'text/html');
         return doc;
     }
 
+    // 코코포리아 추출 모듈
     const CCFParserModule = {
         outputTxt : "", // 전체 결과
         messages : "", // 메시지 개체 ("저널명":"대사 목록")
-        init : function (fileInput, execBtn, outputArea, outputCopyBtn, outputLength,
+        init : function (fileInput, execBtn, optionForm, outputArea, outputCopyBtn, outputLength,
                         journalOutputArea, journalTxtCopyBtn, journalSelectBox, journalOutputLength) {
 
             // 텍스트 추출 결과 복사 이벤트
@@ -82,8 +110,11 @@
                     journalOutputArea.value = "";
                     journalSelectBox.innerHTML = '<option value="0">선택</option>';
 
-                    // string to doc 객체
-                    const doc = await parseHtmlFile(event.target.result);
+                    // 원본 html Str
+                    let oriHtmlStr = event.target.result;
+
+                    // string to doc 객체 (포맷팅 + 수정사항 적용용)
+                    const doc = await parseHtmlFile(oriHtmlStr, optionForm);
 
                     // 결과 저장용 초기화
                     outputTxt = '';
@@ -146,11 +177,14 @@
         }
     }
 
+    // ROLL20 추출 모듈
     const ROLL20ParserModule = {
 
 
-    }    
+    }
 
-    window.CCFParserModule = CCFParserModule;
-    window.ROLL20ParserModule = ROLL20ParserModule;
-})(window);
+    return {
+        CCFParserModule,
+        ROLL20ParserModule
+    }
+})();

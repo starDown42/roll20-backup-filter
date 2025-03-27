@@ -7,3 +7,7 @@ header, header * {
     text-decoration: none;
     color: #000;
 }
+
+.pointer, .pointer * {
+    cursor: pointer!important;    
+}
