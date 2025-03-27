@@ -1,4 +1,45 @@
 (function (window) {
+    // prettier 설정
+    const prettierConfig = {
+        arrowParens: "always",
+        bracketSameLine: false,
+        objectWrap: "preserve",
+        bracketSpacing: true,
+        semi: true,
+        experimentalOperatorPosition: "end",
+        experimentalTernaries: false,
+        singleQuote: true,
+        jsxSingleQuote: false,
+        quoteProps: "as-needed",
+        trailingComma: "all",
+        singleAttributePerLine: false,
+        htmlWhitespaceSensitivity: "css",
+        vueIndentScriptAndStyle: false,
+        proseWrap: "preserve",
+        insertPragma: false,
+        printWidth: 9999,
+        requirePragma: false,
+        tabWidth: 4,
+        useTabs: true,
+        embeddedLanguageFormatting: "off"
+    };
+
+    const parseHtmlFile = async (fileStr) => {
+        // Parser 선언
+        const parser = new DOMParser();
+
+        // 업로드한 html 파일에 대하여 Prettier 오토 포맷팅 적용, string 형태로 저장
+        const formattedHtml = await prettier.format(fileStr, {
+            parser: "html",
+            plugins: [prettierPlugins.html],
+            ...prettierConfig,
+        });
+
+        // string to doc 객체
+        const doc = parser.parseFromString(formattedHtml, 'text/html');
+        return doc;
+    }
+
     const CCFParserModule = {
         outputTxt : "", // 전체 결과
         messages : "", // 메시지 개체 ("저널명":"대사 목록")
@@ -41,18 +82,8 @@
                     journalOutputArea.value = "";
                     journalSelectBox.innerHTML = '<option value="0">선택</option>';
 
-                    // Parser 선언
-                    const parser = new DOMParser();
-
-                    // 업로드한 html 파일에 대하여 Prettier 오토 포맷팅 적용, string 형태로 저장
-                    const formattedHtml = await prettier.format(event.target.result, {
-                        parser: "html",
-                        plugins: [prettierPlugins.html],
-                        ...window.Config.prettierConfig,
-                    });
-
                     // string to doc 객체
-                    const doc = parser.parseFromString(formattedHtml, 'text/html');
+                    const doc = await parseHtmlFile(event.target.result);
 
                     // 결과 저장용 초기화
                     outputTxt = '';
@@ -106,6 +137,8 @@
                             option.textContent = key;
                             journalSelectBox.appendChild(option);
                         });
+
+                    alert("텍스트 추출이 완료되었습니다.")
                 };
 
                 reader.readAsText(fileInput.files[0]);
@@ -113,5 +146,11 @@
         }
     }
 
+    const ROLL20ParserModule = {
+
+
+    }    
+
     window.CCFParserModule = CCFParserModule;
+    window.ROLL20ParserModule = ROLL20ParserModule;
 })(window);
