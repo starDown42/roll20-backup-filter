@@ -1,4 +1,9 @@
-const ParserModule = (function () {
+import * as prettier from "../node_modules/prettier/standalone.mjs";
+import * as htmlFormat from "../node_modules/prettier/plugins/html.mjs";
+
+    // Parser 선언
+    const parser = new DOMParser();
+
     // prettier 설정
     const prettierConfig = {
         arrowParens: "always",
@@ -25,8 +30,10 @@ const ParserModule = (function () {
     };
 
     // 공통:: 수정 시 추가옵션 - 온점 > 말줄임표
-    const edit_dotToEllipsis= (oriHtmlStr) => {
-        return oriHtmlStr.replace(/\.{2,}/g, function(match) {
+    const edit_dotToEllipsis = (doc) => {
+        let htmlStr = doc.body.innerHTML;
+
+        htmlStr = htmlStr.replace(/\.{2,}/g, function(match) {
             var len = match.length;
             if (len <= 4) return '…';
     
@@ -34,46 +41,101 @@ const ParserModule = (function () {
             var count = Math.floor(len / 3) + (len % 3 > 0 ? 1 : 0);
             return '…'.repeat(count);
         });
+
+        doc = parser.parseFromString(htmlStr, 'text/html');
     }
 
-    // 공통:: 수정 시 추가옵션
+    // ROLL20 :: 개체 삭제
+    const edit_removeRoll20DOM = (deleteTargets) =>  {
+        // avatar 없는 애만 1차적으로 제거 (하위요소) 및 avatar 있는 애들 남겨둠둠
+        deleteTargets = deleteTargets.filter(el => {
+            if (!el.querySelector("div.avatar")) {
+                el.remove();
+                return false;
+            }
+            return true;
+        });
+
+        // 최종 삭제를 위한 순회
+        deleteTargets.forEach(A => {
+            // 현재 개체 A, 다음 개체 B
+            let B = A.nextElementSibling;
+            if (!B || !B.classList.contains("message")) return;
+
+            // 삭제대상이 avatar 보유중일 경우
+            if (A.querySelector("div.avatar")) {
+                if (B.querySelector("div.avatar")) {  // 다음 개체가 다른 사람이 말한 거면 삭제대상 삭제
+                    A.remove();
+                } else { // 아니고 내가 말한 거면, 다음 개체(내 말)에 avatar dom 요소 옮기고 삭제
+                    ["div.spacer", "div.avatar", "div.tstamp", "div.by"].forEach(cls => {
+                        A.querySelectorAll(cls).forEach(child => B.prepend(child.cloneNode(true)));
+                    });
+                    A.remove();
+                }
+            } else { // 아예 하위요소일 경우 삭제
+                A.remove();
+            }
+        });
+    }
+
+    // ROLL20 :: 수정 시 추가옵션 - this message is hidden 제거 (roll20)
+    const edit_removeHiddenMsg = (doc) => {
+        // hidden-message targete 선정
+        let deleteTargets = [...doc.querySelectorAll("div.message.hidden-message")];
+        edit_removeRoll20DOM(deleteTargets);
+    }
+
+    // ROLL20 :: 수정 시 추가옵션 - 사담 API 제거 (roll20)
+    const edit_removePrvApiMsg = (doc) => {
+        // hidden-message targete 선정
+        let deleteTargets = [];
+        doc.querySelectorAll("div.message span[style='color: #aaaaaa']").forEach(span => {
+            let parentMessage = span.closest("div.message");
+            if (parentMessage) deleteTargets.push(parentMessage);
+        });
+    }
+
+    // 수정 시 추가옵션
     const editOption = {
-        "dot_to_ellipsis" : edit_dotToEllipsis // 온점 > 말줄임표
+        "dot_to_ellipsis" : edit_dotToEllipsis, // 공통:: 온점 > 말줄임표
+        "remove_hidden_message" : edit_removeHiddenMsg, // ROLL20:: this message is hidden 제거
+        "remove_prv_api_message" : edit_removePrvApiMsg // ROLL20:: 사담 API 제거
     }
 
     // 공통:: html 파일 파싱
     const parseHtmlFile = async (oriHtmlStr, optionForm) => {
-        // Parser 선언
-        const parser = new DOMParser();
-
         let editHtmlStr = oriHtmlStr;
 
         // 업로드한 html 파일에 대하여 Prettier 오토 포맷팅 적용, string 형태로 저장
         editHtmlStr = await prettier.format(editHtmlStr, {
             parser: "html",
-            plugins: [prettierPlugins.html],
+            plugins: [htmlFormat],
             ...prettierConfig,
         });
 
-        //for(optionForm) 옵션에 따라 html 원본 str 수정
+        // 포맷팅 완료한 html 으로 doc 임시 생성
+        let doc = parser.parseFromString(editHtmlStr, 'text/html');
+
+        // <body> 내부의 모든 <script> 태그 삭제
+        doc.querySelectorAll("body script").forEach(script => script.remove());
+
+        //for(optionForm) 옵션에 따라 doc 개체 수정정
          optionForm.querySelectorAll('input').forEach(input => {
             if(input.checked && editOption[input.id]){
-                editHtmlStr = editOption[input.id](editHtmlStr);
+                editOption[input.id](doc);
             }
         });
 
-        // string to doc 객체
-        const doc = parser.parseFromString(editHtmlStr, 'text/html');
         return doc;
     }
 
     // 코코포리아 추출 모듈
-    const CCFParserModule = {
-        outputTxt : "", // 전체 결과
-        messages : "", // 메시지 개체 ("저널명":"대사 목록")
+    export const CCFParserModule = {
         init : function (fileInput, execBtn, optionForm, outputArea, outputCopyBtn, outputLength,
                         journalOutputArea, journalTxtCopyBtn, journalSelectBox, journalOutputLength) {
-
+            var outputTxt = ""; // 전체 결과
+            var messages = ""; // 메시지 개체 ("저널명":"대사  목록")
+            
             // 텍스트 추출 결과 복사 이벤트
             outputCopyBtn.onclick = () => {
                 navigator.clipboard.writeText(outputArea.value);
@@ -113,7 +175,7 @@ const ParserModule = (function () {
                     // 원본 html Str
                     let oriHtmlStr = event.target.result;
 
-                    // string to doc 객체 (포맷팅 + 수정사항 적용용)
+                    // string to doc 객체 (포맷팅 + 수정사항 적용)
                     const doc = await parseHtmlFile(oriHtmlStr, optionForm);
 
                     // 결과 저장용 초기화
@@ -178,13 +240,7 @@ const ParserModule = (function () {
     }
 
     // ROLL20 추출 모듈
-    const ROLL20ParserModule = {
+    export const ROLL20ParserModule = {
 
 
     }
-
-    return {
-        CCFParserModule,
-        ROLL20ParserModule
-    }
-})();
