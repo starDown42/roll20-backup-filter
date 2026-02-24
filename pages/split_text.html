@@ -120,7 +120,7 @@ function splitText() {
 
 function createResultBox(content) {
     const checkbox = document.getElementById("is_check");
-    let content_text = checkbox.value ? prev_text + content : content;
+    let content_text = checkbox.checked ? prev_text + content : content;
 
     const wrapper = document.createElement("div");
     wrapper.className = "result-box";
@@ -150,3 +150,4 @@ function createResultBox(content) {
 
 </body>
 </html>
+
