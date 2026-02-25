@@ -1,104 +1,153 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>PDF 텍스트 → Markdown 파서</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>6000자 줄바꿈 기준 분할</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        textarea {
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        .result-box {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 6px 12px;
+            cursor: pointer;
+        }
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-<style>
-body { padding:20px; }
-textarea { height:280px; font-family:monospace; }
-pre {
-  background:#f8f9fa;
-  padding:16px;
-  white-space:pre-wrap;
-  word-break:break-word;
-}
-</style>
+        span {
+            margin-left: 5px;
+        }
+        
+    </style>
 </head>
 <body>
 
-<div class="container">
-  <h3 class="mb-3">PDF 텍스트 → Markdown 구조 변환기</h3>
+<h3>원본 텍스트 입력</h3>
+<textarea id="sourceText" rows="10" placeholder="여기에 텍스트를 입력해 주십시오."></textarea>
+<button onclick="splitText()">분할 실행</button>
+<span id="sourceTextCnt"></span>
+<span><input type="checkbox" value="true" id="is_check"> 프롬포트 추가 여부</span>
 
-  <textarea id="input" class="form-control mb-3"
-    placeholder="PDF 전체 텍스트를 그대로 붙여넣으십시오."></textarea>
+<hr>
 
-  <button id="parse" class="btn btn-primary mb-2">가공 시작</button>
-  <button id="copy" class="btn btn-success mb-2">전체 복사</button>
-
-  <pre id="output"></pre>
-</div>
+<h3>분할 결과</h3>
+<div id="results"></div>
 
 <script>
-$(function(){
+const prev_text = `
+당신은 일본어 TRPG 시나리오 PDF에서 복사한 텍스트를 정리하는 역할을 수행합니다. 
 
-  $("#parse").click(function(){
+작업 규칙: 
+1. **줄바꿈 정리** 
+	- PDF 복사 과정에서 잘못 끊긴 줄바꿈을 자연스럽게 연결합니다. 
+	- 문장과 단어의 의미가 끊기지 않도록 주의합니다. 
+	- 예: 「表情も身振りも大きく使って、わかりやすい驚きを示 す。」 → 「表情も身振りも大きく使って、わかりやすい驚きを示す。」 
 
-    const lines = $("#input").val().split(/\r?\n/);
+2. **단어 연결** - PDF에서 단어가 중간에 끊겨 있을 경우, 원래 단어로 연결합니다. 
+	- 의미를 임의로 바꾸지 않습니다. 
 
-    let pages = [];
-    let buffer = [];
-    let currentMain = "";
+3. **내용 절대 수정 금지** 
+	- 텍스트의 요약, 삭제, 의역, 재작성은 하지 않습니다. 
+	- KP情報, HO 정보, 인물명, 대사 표기 「」 등 모든 원문 요소를 그대로 유지합니다. 
 
-    for(let i=0; i<lines.length; i++){
-      const line = lines[i];
+4. **마크다운 문법 미사용** 
+	- 문서 정리는 TXT 형태로 수행하며, MD 문법은 적용하지 않습니다. 
+	- 단, 필요시 문단 구분을 위해 PDF 기준 줄바꿈을 살립니다. 
 
-      const pageMatch = line.trim().match(/^(\d{3})\s*P$/);
-      if(pageMatch){
+5. **작업 후 보고** 
+	- 수정한 부분을 표 형태로 정리하여, **원문과 비교** 후 어떤 이유로 수정했는지 설명합니다. 
+	- 예시 표: 
+		| 원문 문제 | 수정 후 | 이유 | 
+		|------------|---------|------| 
+		| 例: おどお\nどしている | おどおどしている | PDF 줄바꿈 때문에 단어가 끊김. 의미 그대로 연결 | 
 
-        const page = pageMatch[1] + " P";
 
-        const main = buffer.length ? buffer.pop().trim() : currentMain;
-        const sub  = (i+1 < lines.length) ? lines[i+1].trim() : "";
+6. **항상 이 규칙 준수** 
+	- 사용자가 별도로 지시하지 않아도, 모든 PDF 텍스트 정리 작업에서 위 규칙을 적용합니다. 
+	- 수정 내역 보고를 반드시 포함합니다. 이 아래로 텍스트를 보내면 이 프롬포트에 맞춰서 답변하시오.
+    - 작업 결과 텍스트는 무조건 "코드박스" 안에 넣어서 보낼 것.
+---
 
-        if(main) currentMain = main;
 
-        const body = buffer.join("\n").trim();
+`;
+function splitText() {
+    const text = document.getElementById("sourceText").value;
+    const maxLength = 3000;
+    const resultsDiv = document.getElementById("results");
+    resultsDiv.innerHTML = "";
 
-        pages.push({
-          main: currentMain,
-          page,
-          sub,
-          body
-        });
+    const textCnt = document.getElementById("sourceTextCnt");
+    textCnt.innerHTML = text.length;
 
-        buffer = [];
-        i++; // 소분류 줄 스킵
-        continue;
-      }
+    let start = 0;
 
-      buffer.push(line);
+    while (start < text.length) {
+        if (start + maxLength >= text.length) {
+            createResultBox(text.slice(start));
+            break;
+        }
+
+        const target = start + maxLength;
+
+        const before = text.lastIndexOf("\n", target);
+        const after = text.indexOf("\n", target);
+
+        let splitPoint;
+
+        if (before === -1 && after === -1) {
+            splitPoint = target;
+        } else if (before === -1) {
+            splitPoint = after + 1;
+        } else if (after === -1) {
+            splitPoint = before + 1;
+        } else {
+            splitPoint = (target - before <= after - target)
+                ? before + 1
+                : after + 1;
+        }
+
+        createResultBox(text.slice(start, splitPoint));
+        start = splitPoint;
     }
+}
 
-    let out = "";
-    let lastMain = "";
+function createResultBox(content) {
+    const checkbox = document.getElementById("is_check");
+    let content_text = checkbox.checked ? prev_text + content : content;
 
-    pages.forEach(p => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "result-box";
 
-      if(p.main && p.main !== lastMain){
-        out += "# " + p.main + "\n\n";
-        lastMain = p.main;
-      }
+    const textarea = document.createElement("textarea");
+    textarea.rows = 6;
+    textarea.readOnly = true;
+    textarea.value = content_text;
 
-      out += "### " + p.page + " " + p.sub + "\n\n";
-      if(p.body) out += p.body + "\n\n";
-    });
+    const button = document.createElement("button");
+    button.textContent = "복사";
+    button.onclick = () => {
+        textarea.select();
+        document.execCommand("copy");
+    };
 
-    $("#output").text(out.trim());
-  });
+    const span = document.createElement("span");
+    span.textContent = content.length + "자";
 
-  $("#copy").click(function(){
-    const text = $("#output").text();
-    if(!text) return;
-    navigator.clipboard.writeText(text).then(() => alert("복사 완료"));
-  });
+    wrapper.appendChild(textarea);
+    wrapper.appendChild(button);
+    wrapper.appendChild(span);
 
-});
+    document.getElementById("results").appendChild(wrapper);
+}
 </script>
 
 </body>
 </html>
+
