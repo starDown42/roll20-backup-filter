@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<style>
+@page {
+  size: A4;
+  margin: 15mm;
+}
+
+body {
+  font-family: "Noto Serif KR", serif;
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+p {
+  margin: 0.4em 0;
+}
+
+ul, ol {
+  margin: 0.4em 0 0.4em 1.2em;
+}
+
+h2 {
+  margin: 0.7em 0 0.5em 0;
+}
+
+h1 {
+  break-before: page;
+  margin-bottom: 0.6em;
+}
+
+h3 {
+  break-before: auto;
+  margin-top: 0.4em;
+}
+
+/* 특정 H3만 페이지 시작 */
+.h3-break {
+  break-before: page;
+}
+
+hr {
+    margin: 2rem 0;
+}
+
+</style>
+</head>
+
+<body>
+<div id="content">
+{{content}}
+</div>
+<script src="https://unpkg.com/pagedjs/dist/paged.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", async function() {
+
+  // 1. h3 → h1 승격 처리
+  const h3s = document.querySelectorAll("#content h3");
+
+  h3s.forEach(h3 => {
+
+    if (/^\d+\s*P/.test(h3.textContent.trim())) {
+
+      const prev = h3.previousElementSibling;
+
+      if (!prev || prev.tagName !== "H1") {
+
+        const newH1 = document.createElement("h1");
+        newH1.innerHTML = h3.innerHTML;
+
+        h3.parentNode.replaceChild(newH1, h3);
+      }
+    }
+  });
+
+  // 2. DOM 수정 완료 후 렌더 시작
+  const paged = new Paged.Previewer();
+  await paged.preview();
+
+});
+</script>
+</body>
+</html>
